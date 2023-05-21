@@ -10,6 +10,7 @@ namespace Behat\Mink\Driver;
 
 use Behat\Mink\Exception\DriverException;
 use Behat\Mink\Selector\Xpath\Escaper;
+use Facebook\WebDriver\Exception\NoSuchCookieException;
 use Facebook\WebDriver\Exception\NoSuchElementException;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
@@ -24,14 +25,22 @@ class PhpWebDriverDriver extends CoreDriver
     public const DEFAULT_BROWSER = 'chrome';
 
     public const DEFAULT_CAPABILITIES = [
-        'browserName' => self::DEFAULT_BROWSER,
-        'platform' => 'ANY',
-        'browser' => self::DEFAULT_BROWSER,
-        'name' => 'Behat Test',
-        'deviceOrientation' => 'landscape',
-        'deviceType' => 'desktop',
-        'selenium-version' => '3.5.3',
+        'default' => [
+            'platform' => 'ANY',
+            'name' => 'Behat Test',
+            'deviceOrientation' => 'landscape',
+            'deviceType' => 'desktop',
+        ],
+        'chrome' => [
+            'goog:chromeOptions' => [
+                'excludeSwitches' => ['enable-automation'],
+            ],
+        ],
+        'firefox' => [
+        ],
     ];
+
+    private const W3C_WINDOW_HANDLE_PREFIX = 'w3cwh:';
 
     private ?RemoteWebDriver $webDriver = null;
 
@@ -49,14 +58,22 @@ class PhpWebDriverDriver extends CoreDriver
 
     public function __construct(
         string  $browserName = null,
-        array   $desiredCapabilities = [],
+        array   $desiredCapabilities = null,
         string  $webDriverHost = null,
         Escaper $xpathEscaper = null
     ) {
         $this->browserName = $browserName ?? self::DEFAULT_BROWSER;
-        $this->setDesiredCapabilities($this->initCapabilities($desiredCapabilities));
+        $this->setDesiredCapabilities($this->initCapabilities($desiredCapabilities ?? []));
         $this->webDriverHost = $webDriverHost ?? 'http://localhost:4444/wd/hub';
         $this->xpathEscaper = $xpathEscaper ?? new Escaper();
+    }
+
+    /**
+     * @api
+     */
+    public function getBrowserName(): string
+    {
+        return $this->browserName;
     }
 
     /**
@@ -76,7 +93,11 @@ class PhpWebDriverDriver extends CoreDriver
         }
 
         // Set defaults
-        foreach (self::DEFAULT_CAPABILITIES as $key => $value) {
+        $defaults = array_merge(
+            self::DEFAULT_CAPABILITIES['default'],
+            self::DEFAULT_CAPABILITIES[$browserName] ?? []
+        );
+        foreach ($defaults as $key => $value) {
             if (is_null($caps->getCapability($key))) {
                 $caps->setCapability($key, $value);
             }
@@ -84,17 +105,7 @@ class PhpWebDriverDriver extends CoreDriver
 
         // Merge in other requested types
         foreach ($desiredCapabilities as $key => $value) {
-            switch ($key) {
-                case 'firefox':
-                    $this->initFirefoxCapabilities($caps, $value);
-                    break;
-                case 'chrome':
-                    $this->initChromeCapabilities($caps, $value);
-                    break;
-                default:
-                    $caps->setCapability($key, $value);
-                    break;
-            }
+            $caps->setCapability($key, $value);
         }
 
         return $caps;
@@ -104,39 +115,26 @@ class PhpWebDriverDriver extends CoreDriver
      * Sets the desired capabilities - called on construction.
      *
      * @see http://code.google.com/p/selenium/wiki/DesiredCapabilities
+     *
+     * @param array|DesiredCapabilities $desiredCapabilities
      */
-    public function setDesiredCapabilities(DesiredCapabilities $desiredCapabilities): static
+    public function setDesiredCapabilities($desiredCapabilities): self
     {
+        if ($this->isStarted()) {
+            throw new DriverException('Unable to set desiredCapabilities, the session has already started');
+        }
+
+        if (is_array($desiredCapabilities)) {
+            $desiredCapabilities = new DesiredCapabilities($desiredCapabilities);
+        }
+
         $this->desiredCapabilities = $desiredCapabilities;
         return $this;
     }
 
-    /**
-     * Init firefox specific capabilities
-     */
-    protected function initFirefoxCapabilities(DesiredCapabilities $caps, array $config): void
+    public function getDesiredCapabilities(): array
     {
-        // @todo - Support FirefoxProfile settings
-    }
-
-    /**
-     * Init chrome specific capabilities
-     *
-     * @see https://sites.google.com/a/chromium.org/chromedriver/capabilities
-     */
-    protected function initChromeCapabilities(DesiredCapabilities $caps, array $config): void
-    {
-        $chromeOptions = [];
-        foreach ($config as $capability => $value) {
-            if ($capability === 'switches') {
-                $chromeOptions['args'] = $value;
-            } else {
-                $chromeOptions[$capability] = $value;
-            }
-            $caps->setCapability('chrome.' . $capability, $value);
-        }
-
-        $caps->setCapability('chromeOptions', $chromeOptions);
+        return $this->desiredCapabilities->toArray();
     }
 
     /**
@@ -159,7 +157,7 @@ class PhpWebDriverDriver extends CoreDriver
     /**
      * @param int|string $char
      */
-    protected static function charToSynOptions($char, ?string $modifier = null): string
+    protected function charToSynOptions($char, ?string $modifier = null): string
     {
         if (is_int($char)) {
             $charCode = $char;
@@ -263,7 +261,7 @@ class PhpWebDriverDriver extends CoreDriver
                         $timeouts->pageLoadTimeout($param / 1000);
                         break;
                     default:
-                        throw new DriverException('Invalid timeout ' . $type);
+                        throw new DriverException("Invalid timeout type: $type");
                 }
             }
         } catch (Throwable $e) {
@@ -322,16 +320,61 @@ class PhpWebDriverDriver extends CoreDriver
 
     public function switchToWindow($name = null): void
     {
+        if ($name === null) {
+            @trigger_error(
+                sprintf(
+                    '%s should not be called with a null window name; %s',
+                    __METHOD__,
+                    'the concept of a main/default window is deprecated'
+                ),
+                E_USER_DEPRECATED
+            );
+            $name = $this->getWindowNames()[0];
+        }
+
+        if (is_string($name)) {
+            $name = $this->getWindowHandleFromName($name);
+        }
+
         $this->webDriver->switchTo()->window($name);
+    }
+
+    private function getWindowHandleFromName(string $name): string
+    {
+        // if name is actually prefixed window handle, just remove the prefix
+        if (strpos($name, self::W3C_WINDOW_HANDLE_PREFIX) === 0) {
+            return substr($name, strlen(self::W3C_WINDOW_HANDLE_PREFIX));
+        }
+
+        // ..otherwise check if any existing window has the specified name
+
+        $origWindowHandle = $this->webDriver->getWindowHandle();
+
+        try {
+            foreach ($this->webDriver->getWindowHandles() as $handle) {
+                $this->webDriver->switchTo()->window($handle);
+                if ($this->evaluateScript('window.name') === $name) {
+                    return $handle;
+                }
+            }
+
+            throw new DriverException("Could not find handle of window named \"$name\"");
+        } finally {
+            $this->webDriver->switchTo()->window($origWindowHandle);
+        }
     }
 
     public function switchToIFrame($name = null): void
     {
-        if ($name) {
-            $this->webDriver->switchTo()->frame($name);
-        } else {
-            $this->switchToWindow();
+        if ($name && is_string($name) && $this->webDriver->isW3cCompliant()) {
+            try {
+                $name = $this->webDriver->findElement(WebDriverBy::id($name));
+            } catch (NoSuchElementException $e) {
+                $name = $this->webDriver->findElement(WebDriverBy::name($name));
+            }
         }
+
+        $this->webDriver->switchTo()->frame($name);
     }
 
     public function setCookie($name, $value = null): void
@@ -344,8 +387,8 @@ class PhpWebDriverDriver extends CoreDriver
 
         $cookieArray = [
             'name' => $name,
-            'value' => urlencode($value),
-            'secure' => false, // thanks, chibimagic!
+            'value' => rawurlencode($value),
+            'secure' => false,
         ];
 
         $this->webDriver->manage()->addCookie($cookieArray);
@@ -353,9 +396,21 @@ class PhpWebDriverDriver extends CoreDriver
 
     public function getCookie($name): ?string
     {
-        return ($cookie = $this->webDriver->manage()->getCookieNamed($name))
-            ? $cookie->getValue()
-            : null;
+        try {
+            $result = $this->webDriver->manage()->getCookieNamed($name);
+        } catch (NoSuchCookieException $e) {
+            $result = null;
+        }
+        if ($result === null) {
+            return null;
+        }
+
+        $result = $result->getValue();
+        if ($result === null) {
+            return null;
+        }
+
+        return rawurldecode($result);
     }
 
     public function getContent(): string
@@ -370,12 +425,29 @@ class PhpWebDriverDriver extends CoreDriver
 
     public function getWindowNames(): array
     {
-        return $this->webDriver->getWindowHandles();
+        $origWindow = $this->webDriver->getWindowHandle();
+
+        try {
+            $result = [];
+            foreach ($this->webDriver->getWindowHandles() as $tempWindow) {
+                $this->webDriver->switchTo()->window($tempWindow);
+                $result[] = $this->getWindowName();
+            }
+            return $result;
+        } finally {
+            $this->webDriver->switchTo()->window($origWindow);
+        }
     }
 
     public function getWindowName(): string
     {
-        return $this->webDriver->getWindowHandle();
+        $name = (string)$this->evaluateScript('window.name');
+
+        if ($name === '') {
+            $name = self::W3C_WINDOW_HANDLE_PREFIX . $this->webDriver->getWindowHandle();
+        }
+
+        return $name;
     }
 
     public function findElementXpaths(
@@ -403,9 +475,7 @@ class PhpWebDriverDriver extends CoreDriver
         #[Language('XPath')]
         $xpath
     ): string {
-        $node = $this->findElement($xpath);
-        $text = $node->getText();
-        return (string)str_replace(["\r", "\r\n", "\n"], ' ', $text ?? '');
+        return str_replace(["\r", "\n"], ' ', $this->findElement($xpath)->getText());
     }
 
     public function getHtml(
@@ -426,7 +496,7 @@ class PhpWebDriverDriver extends CoreDriver
         #[Language('XPath')]
         $xpath,
         $name
-    ): string {
+    ): ?string {
         $escapedName = json_encode((string)$name, JSON_THROW_ON_ERROR);
         $script = "return arguments[0].getAttribute($escapedName)";
 
@@ -563,7 +633,7 @@ class PhpWebDriverDriver extends CoreDriver
         }
 
         $element->sendKeys($value);
-        $this->trigger($xpath, 'change');
+        $this->trigger($xpath, 'blur');
     }
 
     public function check(
@@ -686,7 +756,7 @@ class PhpWebDriverDriver extends CoreDriver
         $element = $this->findElement($xpath);
         $this->ensureInputType($element, $xpath, 'file', 'attach a file on');
 
-        // @todo - Check this is the correct way to upload files
+        // @todo - Check if this is the correct way to upload files
         $element->sendKeys($path);
     }
 
@@ -730,7 +800,7 @@ class PhpWebDriverDriver extends CoreDriver
         $char,
         $modifier = null
     ): void {
-        $options = self::charToSynOptions($char, $modifier);
+        $options = $this->charToSynOptions($char, $modifier);
         $this->trigger($xpath, 'keypress', $options);
     }
 
@@ -740,7 +810,7 @@ class PhpWebDriverDriver extends CoreDriver
         $char,
         $modifier = null
     ): void {
-        $options = self::charToSynOptions($char, $modifier);
+        $options = $this->charToSynOptions($char, $modifier);
         $this->trigger($xpath, 'keydown', $options);
     }
 
@@ -750,7 +820,7 @@ class PhpWebDriverDriver extends CoreDriver
         $char,
         $modifier = null
     ): void {
-        $options = self::charToSynOptions($char, $modifier);
+        $options = $this->charToSynOptions($char, $modifier);
         $this->trigger($xpath, 'keyup', $options);
     }
 
@@ -814,7 +884,7 @@ class PhpWebDriverDriver extends CoreDriver
         $script
     ) {
         if (strncmp(ltrim((string)$script), 'return ', 7) !== 0) {
-            $script = "return ($script);";
+            $script = "return $script;";
         }
 
         return $this->webDriver->executeScript($script);
@@ -838,16 +908,14 @@ class PhpWebDriverDriver extends CoreDriver
 
     public function resizeWindow($width, $height, $name = null): void
     {
-        // Note: Only 'current' window can be resized, so other names are ignored
-        // FIXME we could switch to other window and then back
-        if ($name && $name !== 'current') {
-            throw new DriverException("Can not resize non-current window: $name");
-        }
-        $this
-            ->webDriver
-            ->manage()
-            ->window()
-            ->setSize(new WebDriverDimension($width, $height));
+        $this->withWindow(
+            $name,
+            fn() => $this
+                ->webDriver
+                ->manage()
+                ->window()
+                ->setSize(new WebDriverDimension($width, $height))
+        );
     }
 
     public function submitForm(
@@ -859,12 +927,34 @@ class PhpWebDriverDriver extends CoreDriver
 
     public function maximizeWindow($name = null): void
     {
-        // Note: Only 'current' window can be resized, so other names ignored
-        // FIXME we could switch to other window and then back
-        if ($name && $name !== 'current') {
-            throw new DriverException("Can not resize non-current window: $name");
+        $this->withWindow(
+            $name,
+            fn() => $this
+                ->webDriver
+                ->manage()
+                ->window()
+                ->maximize()
+        );
+    }
+
+    /**
+     * @return mixed
+     */
+    protected function withWindow(?string $name, callable $callback)
+    {
+        $origName = $this->getWindowName();
+
+        try {
+            if ($origName !== $name) {
+                $this->switchToWindow($name);
+            }
+
+            return $callback();
+        } finally {
+            if ($origName !== $name) {
+                $this->switchToWindow($origName);
+            }
         }
-        $this->webDriver->manage()->window()->maximize();
     }
 
     /**

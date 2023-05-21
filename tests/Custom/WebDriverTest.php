@@ -7,12 +7,23 @@ use Behat\Mink\Tests\Driver\TestCase;
 
 class WebDriverTest extends TestCase
 {
-    public function testGetWebDriverSessionId()
+    protected function setUp(): void
     {
-        $session = $this->getSession();
-        $session->start();
-        /** @var PhpWebDriverDriver $driver */
-        $driver = $session->getDriver();
+        parent::setUp();
+
+        $this->getSession()->start();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->getSession()->stop();
+
+        parent::tearDown();
+    }
+
+    public function testGetWebDriverSessionId(): void
+    {
+        $driver = $this->getSession()->getDriver();
         $this->assertNotEmpty($driver->getWebDriverSessionId(), 'Started session has an ID');
 
         $driver = new PhpWebDriverDriver();

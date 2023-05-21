@@ -1,0 +1,10 @@
+- [x] Bump first version to major version of original library
+- [ ] Consider adding a behat/mink extension
+- [x] Add phpunit dependency
+- [x] Clean up phpunit.xml.dist
+- [x] Run the mink-test-server automatically inside tests
+- [x] Fix/check codecov stuff
+- [ ] Fix/check pipeline stuff
+- [ ] Consider using browser-specific driver class when possible, instead of generic RemoteWebDriver
+- [ ] Remove todo file
+- [ ] Squash everything in one first commit

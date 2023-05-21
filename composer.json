@@ -1,5 +1,5 @@
 {
-  "name": "behat/mink-phpwebdriver-driver",
+  "name": "uuf6429/mink-phpwebdriver-driver",
   "description": "(Facebook) PhpWebDriver driver for Mink framework",
   "keywords": [
     "selenium",
@@ -36,7 +36,8 @@
   },
   "require-dev": {
     "roave/security-advisories": "dev-latest",
-    "mink/driver-testsuite": "dev-master"
+    "mink/driver-testsuite": "dev-master",
+    "phpunit/phpunit": "^9 || ^10"
   },
   "autoload": {
     "psr-4": {
@@ -48,7 +49,11 @@
       "Behat\\Mink\\Tests\\Driver\\": "tests"
     }
   },
+  "config": {
+    "process-timeout": 0
+  },
   "scripts": {
-    "get-syn": "@php src/Resources/get-syn.php"
+    "get-syn": "php src/Resources/get-syn.php",
+    "tests": "phpunit"
   }
 }

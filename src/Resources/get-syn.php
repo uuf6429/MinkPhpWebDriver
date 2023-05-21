@@ -23,3 +23,5 @@ file_put_contents(
         file_get_contents("https://www.unpkg.com/syn@$version/dist/global/syn.js")
     )
 );
+
+echo "Done.\n";
