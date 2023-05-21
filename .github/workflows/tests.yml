@@ -18,7 +18,8 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        php: [ '7.2', '7.3', '7.4', '8.0', '8.1' ]
+        php: [ '7.3', '7.4', '8.0', '8.1', '8.2' ]
+        selenium_image: [ 'selenium/standalone-chrome:4' ]
       fail-fast: false
 
     steps:
@@ -33,12 +34,11 @@ jobs:
           coverage: "xdebug"
           php-version: "${{ matrix.php }}"
           tools: composer
-          # PHP 7.1 development web server segfaults if timezone not set.
-          ini-values: date.timezone=Europe/Paris, error_reporting=-1, display_errors=On
+          ini-values: date.timezone=Europe/Berlin, error_reporting=-1, display_errors=On
 
       - name: Install dependencies
         run: |
-          composer update --no-interaction --prefer-dist
+          composer update --no-interaction --prefer-dist --no-progress
 
       - name: Setup Mink test server
         run: |
@@ -47,7 +47,7 @@ jobs:
 
       - name: Start Selenium
         run: |
-          docker run --net host --name selenium --volume /dev/shm:/dev/shm --shm-size 2g selenium/standalone-firefox:2.53.1 &> ./logs/selenium.log &
+          docker run --net host --name selenium --volume /dev/shm:/dev/shm --shm-size 2g ${{ matrix.selenium_image }} &> ./logs/selenium.log &
 
       - name: Wait for browser & PHP to start
         run: |

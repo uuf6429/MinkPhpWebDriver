@@ -2,7 +2,7 @@
 
 namespace Behat\Mink\Tests\Driver\Custom;
 
-use Behat\Mink\Driver\Selenium2Driver;
+use Behat\Mink\Driver\PhpWebDriverDriver;
 use Behat\Mink\Tests\Driver\TestCase;
 
 class WebDriverTest extends TestCase
@@ -11,11 +11,11 @@ class WebDriverTest extends TestCase
     {
         $session = $this->getSession();
         $session->start();
-        /** @var Selenium2Driver $driver */
+        /** @var PhpWebDriverDriver $driver */
         $driver = $session->getDriver();
         $this->assertNotEmpty($driver->getWebDriverSessionId(), 'Started session has an ID');
 
-        $driver = new Selenium2Driver();
+        $driver = new PhpWebDriverDriver();
         $this->assertNull($driver->getWebDriverSessionId(), 'Not started session don\'t have an ID');
     }
 }

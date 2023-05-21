@@ -2,7 +2,7 @@
 
 namespace Behat\Mink\Tests\Driver;
 
-use Behat\Mink\Driver\Selenium2Driver;
+use Behat\Mink\Driver\PhpWebDriverDriver;
 use Behat\Mink\Tests\Driver\Basic\BasicAuthTest;
 
 class Selenium2Config extends AbstractConfig
@@ -20,7 +20,7 @@ class Selenium2Config extends AbstractConfig
         $browser = getenv('WEB_FIXTURES_BROWSER') ?: 'firefox';
         $seleniumHost = $_SERVER['DRIVER_URL'];
 
-        return new Selenium2Driver($browser, null, $seleniumHost);
+        return new PhpWebDriverDriver($browser, null, $seleniumHost);
     }
 
     /**

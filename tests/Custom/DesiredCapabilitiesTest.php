@@ -2,7 +2,7 @@
 
 namespace Behat\Mink\Tests\Driver\Custom;
 
-use Behat\Mink\Driver\Selenium2Driver;
+use Behat\Mink\Driver\PhpWebDriverDriver;
 use Behat\Mink\Tests\Driver\TestCase;
 
 class DesiredCapabilitiesTest extends TestCase
@@ -21,7 +21,7 @@ class DesiredCapabilitiesTest extends TestCase
             'selenium-version'  => '2.45.0'
         );
 
-        $driver = new Selenium2Driver('firefox', $caps);
+        $driver = new PhpWebDriverDriver('firefox', $caps);
         $this->assertNotEmpty($driver->getDesiredCapabilities(), 'desiredCapabilities empty');
         $this->assertIsArray($driver->getDesiredCapabilities());
         $this->assertEquals($caps, $driver->getDesiredCapabilities());
