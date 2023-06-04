@@ -35,19 +35,30 @@ Please refer to [MinkExtension-example](https://github.com/Behat/MinkExtension-e
 This library works with [Composer](https://getcomposer.org/).
 After [setting up Behat and Mink](https://mink.behat.org/en/latest/#installation), run:
 
-```bash
+```shell
 composer require uuf6429/mink-phpwebdriver-driver
 ```
 
 ## Testing
 
+### To test against a single Selenium instance...
+
 1. Start selenium
-    1. The easiest way is with docker:
-       ```bash
+    1. The easiest way is with docker and the provided `docker-compose` file:
+       ```shell
        docker-compose up
        ```
+       _Note that by default that will bring up an instance of the latest Selenium 4._
     2. Otherwise, you will have to download Selenium and set up a target browser.
 2. Run the tests
-   ```bash
+   ```shell
    composer run tests
    ```
+
+### ...whereas to run all the tests, just like GitHub
+1. [Install `act`](https://github.com/nektos/act#installation)
+2. Run:
+```shell
+act -P ubuntu-18.04=shivammathur/node:1804
+```
+_(the custom image is needed to avoid https://github.com/nektos/act/issues/1681)_
