@@ -29,7 +29,7 @@ jobs:
       - name: Start Selenium
         run: |
           mkdir -p ./logs
-          SELENIUM_IMAGE=selenium/standalone-${{ matrix.browser }}:${{ matrix.selenium }} docker compose up
+          SELENIUM_IMAGE=selenium/standalone-${{ matrix.browser }}:${{ matrix.selenium }} docker compose up --no-color &> ./logs/selenium.log &
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -58,11 +58,12 @@ jobs:
 
       - name: Wait for selenium to start
         run: |
-          curl --head -X GET --silent --show-error --retry 60 --retry-connrefused --retry-delay 1 http://localhost:4444
+          curl --head -X GET --silent --show-error --retry 60 --retry-connrefused --retry-delay 1 http://${DOCKER_HOST}:4444
 
       - name: Run tests
         run: |
           export WEB_FIXTURES_BROWSER=${{ matrix.browser }}
+          export DRIVER_URL=http://${DOCKER_HOST}:4444/wd/hub
           composer run tests -- -v --coverage-clover=coverage.xml
 
       - name: Upload coverage
