@@ -26,6 +26,11 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Start Selenium
+        run: |
+          mkdir -p ./logs
+          SELENIUM_IMAGE=selenium/standalone-${{ matrix.browser }}:${{ matrix.selenium }} docker compose up --no-color &> ./logs/selenium.log &
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -51,22 +56,19 @@ jobs:
         run: |
           composer update --no-interaction --prefer-dist --no-progress --ansi
 
-      - name: Start Selenium
-        run: |
-          mkdir -p ./logs
-          SELENIUM_IMAGE=selenium/standalone-${{ matrix.browser }}:${{ matrix.selenium }} docker-compose up --no-color &> ./logs/selenium.log &
-
       - name: Wait for selenium to start
         run: |
-          while ! nc -z localhost 4444 </dev/null; do echo Waiting for remote driver to start...; sleep 1; done
+          curl --head -X GET --silent --show-error --retry 60 --retry-connrefused --retry-delay 1 http://172.18.0.2:4444
 
       - name: Run tests
         run: |
           export WEB_FIXTURES_BROWSER=${{ matrix.browser }}
+          export DRIVER_URL=http://172.18.0.2:4444/wd/hub
           composer run tests -- -v --coverage-clover=coverage.xml
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
+        if: ${{ !env.ACT }}
         with:
           files: coverage.xml
 

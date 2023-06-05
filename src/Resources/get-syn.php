@@ -1,6 +1,17 @@
 <?php
 
+/**
+ * Simple script that updates syn.js by downloading it from NPM through Unpkg and attaches a file
+ * header comment. To switch to a different Syn version, just update $version variable appropriately.
+ *
+ * @codeCoverageIgnore
+ */
+
 $version = '0.15.0';
+
+if ('cli' !== PHP_SAPI && 'phpdbg' !== PHP_SAPI) {
+    throw new RuntimeException('This script must be run from the command line.');
+}
 
 file_put_contents(
     __DIR__ . '/syn.js',
