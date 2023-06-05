@@ -59,6 +59,6 @@ composer require uuf6429/mink-phpwebdriver-driver
 1. [Install `act`](https://github.com/nektos/act#installation)
 2. Run:
 ```shell
-act -P ubuntu-18.04=shivammathur/node:1804
+act -P ubuntu-latest=shivammathur/node:latest
 ```
 _(the custom image is needed to avoid https://github.com/nektos/act/issues/1681)_
