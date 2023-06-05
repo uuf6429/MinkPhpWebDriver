@@ -58,12 +58,12 @@ jobs:
 
       - name: Wait for selenium to start
         run: |
-          curl --head -X GET --silent --show-error --retry 60 --retry-connrefused --retry-delay 1 http://${DOCKER_HOST}:4444
+          curl --head -X GET --silent --show-error --retry 60 --retry-connrefused --retry-delay 1 http://host.docker.internal:4444
 
       - name: Run tests
         run: |
           export WEB_FIXTURES_BROWSER=${{ matrix.browser }}
-          export DRIVER_URL=http://${DOCKER_HOST}:4444/wd/hub
+          export DRIVER_URL=http://host.docker.internal:4444/wd/hub
           composer run tests -- -v --coverage-clover=coverage.xml
 
       - name: Upload coverage
