@@ -54,7 +54,7 @@
   },
   "scripts": {
     "get-syn": "php src/Resources/get-syn.php",
-    "tests": "phpunit"
+    "tests": "phpunit --colors=always"
   },
   "repositories": [
     {
