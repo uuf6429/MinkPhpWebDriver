@@ -4,7 +4,8 @@
 - [x] Clean up phpunit.xml.dist
 - [x] Run the mink-test-server automatically inside tests
 - [x] Fix/check codecov stuff
-- [ ] Fix/check pipeline stuff
+- [x] Fix/check pipeline stuff
+- [ ] GitHub IP 172.18.0.2 in workflow does not work for local runs (via act)
 - [ ] Consider using browser-specific driver class when possible, instead of generic RemoteWebDriver
 - [ ] Remove todo file
 - [ ] Squash everything in one first commit
