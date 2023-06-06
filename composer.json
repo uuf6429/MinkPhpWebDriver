@@ -36,7 +36,7 @@
   },
   "require-dev": {
     "roave/security-advisories": "dev-latest",
-    "mink/driver-testsuite": "dev-master",
+    "mink/driver-testsuite": "dev-fix/various-fixes as dev-master",
     "phpunit/phpunit": "^9 || ^10"
   },
   "autoload": {
@@ -55,5 +55,11 @@
   "scripts": {
     "get-syn": "php src/Resources/get-syn.php",
     "tests": "phpunit"
-  }
+  },
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/uuf6429/driver-testsuite"
+    }
+  ]
 }
