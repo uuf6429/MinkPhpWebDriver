@@ -4,6 +4,7 @@ namespace Behat\Mink\Tests\Driver;
 
 use Behat\Mink\Driver\PhpWebDriverDriver;
 use Behat\Mink\Tests\Driver\Basic\BasicAuthTest;
+use Behat\Mink\Tests\Driver\Js\WindowTest;
 
 class PhpWebDriverDriverConfig extends AbstractConfig
 {
@@ -46,6 +47,10 @@ class PhpWebDriverDriverConfig extends AbstractConfig
     {
         if ($testCase === BasicAuthTest::class && $test === 'testBasicAuthInUrl') {
             return 'This driver has mixed support for basic auth modals, depending on browser type and selenium version.';
+        }
+
+        if ($testCase === WindowTest::class && $test === 'testWindowMaximize') {
+            return 'There is no sane way to find if a window is indeed maximized; this test is quite broken.';
         }
 
         return parent::skipMessage($testCase, $test);
