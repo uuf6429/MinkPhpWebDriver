@@ -10,9 +10,9 @@ namespace Behat\Mink\Driver;
 
 use Behat\Mink\Exception\DriverException;
 use Behat\Mink\Selector\Xpath\Escaper;
-use Facebook\WebDriver\Exception\InvalidElementStateException;
 use Facebook\WebDriver\Exception\NoSuchCookieException;
 use Facebook\WebDriver\Exception\NoSuchElementException;
+use Facebook\WebDriver\Exception\WebDriverException;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\Remote\RemoteWebElement;
@@ -617,7 +617,7 @@ class PhpWebDriverDriver extends CoreDriver
                         try {
                             $element->clear();
                             $element->sendKeys($value);
-                        } catch (InvalidElementStateException $ex) {
+                        } catch (WebDriverException $ex) {
                             // fix for Selenium 2 compatibility, since it's not able to clear these specific fields
                             $this->executeJsOnElement(
                                 $element,
