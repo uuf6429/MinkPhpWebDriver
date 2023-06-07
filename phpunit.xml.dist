@@ -12,7 +12,6 @@
         <var name="driver_config_factory" value="Behat\Mink\Tests\Driver\PhpWebDriverDriverConfig::getInstance"/>
         <server name="DRIVER_URL" value="http://localhost:4444/wd/hub"/>
         <server name="WEB_FIXTURES_HOST" value="http://host.docker.internal:8002"/>
-        <server name="SYMFONY_DEPRECATIONS_HELPER" value="max[direct]=0"/>
         <server name="DRIVER_MACHINE_BASE_PATH" value="/fixtures/"/>
     </php>
     <coverage>
@@ -20,7 +19,4 @@
             <directory>./src</directory>
         </include>
     </coverage>
-    <listeners>
-        <listener class="Symfony\Bridge\PhpUnit\SymfonyTestsListener"/>
-    </listeners>
 </phpunit>
