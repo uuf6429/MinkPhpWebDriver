@@ -10,6 +10,7 @@ namespace Behat\Mink\Driver;
 
 use Behat\Mink\Exception\DriverException;
 use Behat\Mink\Selector\Xpath\Escaper;
+use Facebook\WebDriver\Exception\InvalidElementStateException;
 use Facebook\WebDriver\Exception\NoSuchCookieException;
 use Facebook\WebDriver\Exception\NoSuchElementException;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
@@ -210,8 +211,12 @@ class PhpWebDriverDriver extends CoreDriver
      * @return mixed
      * @example $this->executeJsOnXpath($xpath, 'return argument[0].childNodes.length');
      */
-    private function executeJsOnElement(RemoteWebElement $element, string $script, bool $sync = true)
-    {
+    private function executeJsOnElement(
+        RemoteWebElement $element,
+        #[Language('JavaScript')]
+        string           $script,
+        bool             $sync = true
+    ) {
         if ($sync) {
             return $this->webDriver->executeScript($script, [$element]);
         }
@@ -579,60 +584,70 @@ class PhpWebDriverDriver extends CoreDriver
         $element = $this->findElement($xpath);
         $elementName = strtolower($element->getTagName() ?? '');
 
-        if ('select' === $elementName) {
-            if (is_array($value)) {
-                $this->deselectAllOptions($element);
-
-                foreach ($value as $option) {
-                    $this->selectOptionOnElement($element, $option, true);
+        switch ($elementName) {
+            case 'select':
+                if (is_array($value)) {
+                    $this->deselectAllOptions($element);
+                    foreach ($value as $option) {
+                        $this->selectOptionOnElement($element, $option, true);
+                    }
+                    return;
                 }
-
+                $this->selectOptionOnElement($element, $value);
                 return;
-            }
 
-            $this->selectOptionOnElement($element, $value);
-
-            return;
-        }
-
-        if ('input' === $elementName) {
-            $elementType = strtolower($element->getAttribute('type') ?? '');
-
-            if (in_array($elementType, ['submit', 'image', 'button', 'reset'])) {
-                $message = 'Impossible to set value an element with XPath "%s" as it is not a select, textarea or textbox';
-                throw new DriverException(sprintf($message, $xpath));
-            }
-
-            if ('checkbox' === $elementType) {
-                if ($element->isSelected() xor $value) {
-                    $this->clickOnElement($element);
-                }
-
-                return;
-            }
-
-            if ('radio' === $elementType) {
-                $this->selectRadioValue($element, $value);
-
-                return;
-            }
-
-            if ('file' === $elementType) {
-                // @todo - Check if this is correct way to upload files
+            case 'textarea':
+                $element->clear();
                 $element->sendKeys($value);
-                // $element->postValue(['value' => [(string)$value]]);
+                break;
 
-                return;
-            }
+            case 'input':
+                $elementType = strtolower($element->getAttribute('type') ?? '');
+                switch ($elementType) {
+                    case 'submit':
+                    case 'image':
+                    case 'button':
+                    case 'reset':
+                        $message = 'Cannot set value an element with XPath "%s" as it is not a select, textarea or textbox';
+                        throw new DriverException(sprintf($message, $xpath));
+
+                    case 'color':
+                    case 'date':
+                    case 'time':
+                        try {
+                            $element->clear();
+                            $element->sendKeys($value);
+                        } catch (InvalidElementStateException $ex) {
+                            // fix for Selenium 2 compatibility, since it's not able to clear these specific fields
+                            $this->executeJsOnElement(
+                                $element,
+                                'arguments[0].value = ' . json_encode($value, JSON_THROW_ON_ERROR)
+                            );
+                        }
+                        break;
+
+                    case 'checkbox':
+                        if ($element->isSelected() xor $value) {
+                            $this->clickOnElement($element);
+                        }
+                        return;
+
+                    case 'radio':
+                        $this->selectRadioValue($element, $value);
+                        return;
+
+                    case 'file':
+                        // @todo - Check if this is correct way to upload files
+                        $element->sendKeys($value);
+                        // $element->postValue(['value' => [(string)$value]]);
+                        return;
+
+                    default:
+                        $element->clear();
+                        $element->sendKeys($value);
+                }
         }
 
-        $value = (string)$value;
-
-        if (in_array($elementName, ['input', 'textarea'])) {
-            $element->clear();
-        }
-
-        $element->sendKeys($value);
         $this->trigger($xpath, 'blur');
     }
 
