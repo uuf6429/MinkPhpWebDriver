@@ -3,6 +3,7 @@
 namespace Behat\Mink\Tests\Driver;
 
 use Behat\Mink\Driver\PhpWebDriverDriver;
+use Behat\Mink\Tests\Driver\Basic\BasicAuthTest;
 
 class PhpWebDriverDriverConfig extends AbstractConfig
 {
@@ -39,5 +40,14 @@ class PhpWebDriverDriverConfig extends AbstractConfig
         }
 
         return parent::mapRemoteFilePath($file);
+    }
+
+    public function skipMessage($testCase, $test)
+    {
+        if ($testCase === BasicAuthTest::class && $test === 'testBasicAuthInUrl') {
+            return 'This driver has mixed support for basic auth modals, depending on browser type and selenium version.';
+        }
+
+        return parent::skipMessage($testCase, $test);
     }
 }
