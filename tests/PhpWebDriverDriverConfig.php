@@ -3,7 +3,6 @@
 namespace Behat\Mink\Tests\Driver;
 
 use Behat\Mink\Driver\PhpWebDriverDriver;
-use Behat\Mink\Tests\Driver\Basic\BasicAuthTest;
 
 class PhpWebDriverDriverConfig extends AbstractConfig
 {
@@ -40,14 +39,5 @@ class PhpWebDriverDriverConfig extends AbstractConfig
         }
 
         return parent::mapRemoteFilePath($file);
-    }
-
-    public function skipMessage($testCase, $test): ?string
-    {
-        if (BasicAuthTest::class === $testCase && 'testBasicAuthInUrl' === $test) {
-            return 'Basic auth test is broken.';
-        }
-
-        return parent::skipMessage($testCase, $test);
     }
 }
