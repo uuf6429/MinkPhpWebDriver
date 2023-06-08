@@ -612,6 +612,13 @@ class PhpWebDriverDriver extends CoreDriver
                         throw new DriverException(sprintf($message, $xpath));
 
                     case 'color':
+                        // one cannot simply type into a color field, nor clear it
+                        $this->executeJsOnElement(
+                            $element,
+                            'arguments[0].value = ' . json_encode($value, JSON_THROW_ON_ERROR)
+                        );
+                        break;
+
                     case 'date':
                     case 'time':
                         try {
