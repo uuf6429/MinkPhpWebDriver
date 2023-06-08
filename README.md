@@ -1,84 +1,64 @@
-Mink Selenium2 (webdriver) Driver
-=================================
-[![Latest Stable Version](https://poser.pugx.org/behat/mink-selenium2-driver/v/stable.svg)](https://packagist.org/packages/behat/mink-selenium2-driver)
-[![Latest Unstable Version](https://poser.pugx.org/behat/mink-selenium2-driver/v/unstable.svg)](https://packagist.org/packages/behat/mink-selenium2-driver)
-[![Total Downloads](https://poser.pugx.org/behat/mink-selenium2-driver/downloads.svg)](https://packagist.org/packages/behat/mink-selenium2-driver)
-[![CI](https://github.com/minkphp/MinkSelenium2Driver/actions/workflows/tests.yml/badge.svg)](https://github.com/minkphp/MinkSelenium2Driver/actions/workflows/tests.yml)
-[![License](https://poser.pugx.org/behat/mink-selenium2-driver/license.svg)](https://packagist.org/packages/behat/mink-selenium2-driver)
-[![codecov](https://codecov.io/gh/minkphp/MinkSelenium2Driver/branch/master/graph/badge.svg?token=x2Q2iM3XYz)](https://codecov.io/gh/minkphp/MinkSelenium2Driver)
+# Mink (Facebook) PhpWebDriver Driver
 
-Usage Example
--------------
+[![Latest Stable Version](https://poser.pugx.org/uuf6429/MinkPhpWebDriver/v/stable.svg)](https://packagist.org/packages/uuf6429/MinkPhpWebDriver)
+[![CI](https://github.com/minkphp/MinkSelenium2Driver/actions/workflows/tests.yml/badge.svg)](https://github.com/uuf6429/MinkPhpWebDriver/actions/workflows/tests.yml)
+[![License](https://poser.pugx.org/uuf6429/MinkPhpWebDriver/license.svg)](https://github.com/uuf6429/MinkPhpWebDriver/blob/main/LICENSE.md)
+[![codecov](https://codecov.io/gh/uuf6429/MinkPhpWebDriver/branch/master/graph/badge.svg?token=x2Q2iM3XYz)](https://codecov.io/gh/uuf6429/MinkPhpWebDriver)
 
-``` php
+The [minkphp/MinkSelenium2Driver](https://github.com/minkphp/MinkSelenium2Driver) library
+is [stuck](https://github.com/minkphp/MinkSelenium2Driver/issues/293) [in 2015](https://github.com/minkphp/MinkSelenium2Driver/issues/262#issuecomment-277532163).
+This library is the glue between Mink and [php-webdriver/webdriver](https://github.com/php-webdriver/php-webdriver) (
+aka [facebook/php-webdriver](https://packagist.org/packages/facebook/webdriver)).
+
+## Usage Example
+
+```php
 <?php
 
 use Behat\Mink\Mink,
     Behat\Mink\Session,
-    Behat\Mink\Driver\Selenium2Driver;
+    Behat\Mink\Driver\PhpWebDriverDriver;
 
-use Selenium\Client as SeleniumClient;
+$url = 'https://example.com';
 
-$browser = 'firefox';
-$url = 'http://example.com';
+$mink = new Mink([
+    'phpwebdriver' => new Session(new PhpWebDriverDriver(null, null, $url)),
+]);
 
-$mink = new Mink(array(
-    'selenium2' => new Session(new Selenium2Driver($browser, null, $url)),
-));
-
-$mink->getSession('selenium2')->getPage()->findLink('Chat')->click();
+$mink->getSession('phpwebdriver')->getPage()->findLink('Chat')->click();
 ```
 
 Please refer to [MinkExtension-example](https://github.com/Behat/MinkExtension-example) for an executable example.
 
-Installation
-------------
+## Installation
 
-``` json
-{
-    "require": {
-        "behat/mink":                   "~1.5",
-        "behat/mink-selenium2-driver":  "~1.1"
-    }
-}
+This library works with [Composer](https://getcomposer.org/).
+After [setting up Behat and Mink](https://mink.behat.org/en/latest/#installation), run:
+
+```shell
+composer require uuf6429/mink-phpwebdriver-driver
 ```
 
-``` bash
-$> curl -sS https://getcomposer.org/installer | php
-$> php composer.phar install
+## Testing
+
+### To test against a single Selenium instance...
+
+1. Start selenium
+    1. The easiest way is with docker and the provided `docker-compose` file:
+       ```shell
+       docker-compose up
+       ```
+       _Note that by default that will bring up an instance of the latest Selenium 4._
+    2. Otherwise, you will have to download Selenium and set up a target browser.
+2. Run the tests
+   ```shell
+   composer run tests
+   ```
+
+### ...whereas to run all the tests, just like GitHub
+1. [Install `act`](https://github.com/nektos/act#installation)
+2. Run:
+```shell
+act -P ubuntu-latest=shivammathur/node:latest
 ```
-
-Testing
-------------
-
-1. Start WebDriver
-    1. If you have Docker installed, run
-    ```bash
-    docker run -p 4444:4444 selenium/standalone-firefox:2.53.1
-    ```
-    2. If you do not have Docker, but you have Java
-    ```bash
-    curl -L https://selenium-release.storage.googleapis.com/2.53/selenium-server-standalone-2.53.1.jar > selenium-server-standalone-2.53.1.jar
-    java -jar selenium-server-standalone-2.53.1.jar
-    ```
-2. Start WebServer by running
-    ``` bash
-    ./vendor/bin/mink-test-server
-    ```
-3. Start PhpUnit
-    ```bash
-    composer require --dev phpunit/phpunit
-    ./vendor/bin/phpunit -v --coverage-clover=coverage.clover
-    ```
-
-Copyright
----------
-
-Copyright (c) 2012 Pete Otaqui <pete@otaqui.com>.
-
-Maintainers
------------
-
-* Christophe Coevoet [stof](https://github.com/stof)
-* Pete Otaqui [pete-otaqui](https://github.com/pete-otaqui)
-* Alexander Obuhovich [aik099](https://github.com/aik099)
+_(the custom image is needed to avoid https://github.com/nektos/act/issues/1681)_

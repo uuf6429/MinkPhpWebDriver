@@ -2,7 +2,6 @@ name: CI
 
 on:
   push:
-  pull_request:
 
 env:
   DRIVER_URL: "http://localhost:4444/wd/hub"
@@ -12,20 +11,26 @@ defaults:
     shell: bash
 
 jobs:
-
   tests:
     name: Tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.browser == 'chrome' && matrix.selenium == '2.53.1' }}
     strategy:
-      matrix:
-        php: [ '7.2', '7.3', '7.4', '8.0', '8.1' ]
       fail-fast: false
-
+      matrix:
+        php: [ '7.4', '8.0', '8.1', '8.2' ]
+        browser: [ 'firefox', 'chrome' ]
+        selenium: [ '2.53.1', '3', '4' ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 1
+
+      - name: Start Selenium
+        run: |
+          mkdir -p ./logs
+          SELENIUM_IMAGE=selenium/standalone-${{ matrix.browser }}:${{ matrix.selenium }} docker compose up --no-color &> ./logs/selenium.log &
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -33,40 +38,44 @@ jobs:
           coverage: "xdebug"
           php-version: "${{ matrix.php }}"
           tools: composer
-          # PHP 7.1 development web server segfaults if timezone not set.
-          ini-values: date.timezone=Europe/Paris, error_reporting=-1, display_errors=On
+          ini-values: date.timezone=Europe/Berlin, error_reporting=-1, display_errors=On
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.json') }}
+          restore-keys: ${{ runner.os }}-composer-
 
       - name: Install dependencies
         run: |
-          composer update --no-interaction --prefer-dist
+          composer update --no-interaction --prefer-dist --no-progress --ansi
 
-      - name: Setup Mink test server
+      - name: Wait for selenium to start
         run: |
-          mkdir ./logs
-          ./vendor/bin/mink-test-server &> ./logs/mink-test-server.log &
-
-      - name: Start Selenium
-        run: |
-          docker run --net host --name selenium --volume /dev/shm:/dev/shm --shm-size 2g selenium/standalone-firefox:2.53.1 &> ./logs/selenium.log &
-
-      - name: Wait for browser & PHP to start
-        run: |
-          while ! nc -z localhost 4444 </dev/null; do echo Waiting for remote driver to start...; sleep 1; done
-          while ! nc -z localhost 8002 </dev/null; do echo Waiting for PHP server to start...; sleep 1; done
+          curl --head -X GET --silent --show-error --retry 60 --retry-connrefused --retry-delay 1 http://172.18.0.2:4444
 
       - name: Run tests
         run: |
-          vendor/bin/phpunit -v --coverage-clover=coverage.xml
+          export WEB_FIXTURES_BROWSER=${{ matrix.browser }}
+          export DRIVER_URL=http://172.18.0.2:4444/wd/hub
+          composer run tests -- -v --coverage-clover=coverage.xml --colors=always --testdox
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
+        if: ${{ !env.ACT }}
         with:
           files: coverage.xml
 
       - name: Archive logs artifacts
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
+        if: always()
         with:
-          name: logs_php-${{ matrix.php }}
-          path: |
-            logs
+          name: logs_php-${{ matrix.php }}_selenium-${{ matrix.selenium }}_${{ matrix.browser }}
+          path: logs

@@ -1,0 +1,8 @@
+/.gitattributes             export-ignore
+/.github                    export-ignore
+/.gitignore                 export-ignore
+/phpunit.xml.dist           export-ignore
+/tests                      export-ignore
+/LICENSE.md                 export-ignore
+/README.md                  export-ignore
+/src/Resources/get-syn.php  export-ignore
