@@ -14,7 +14,7 @@ jobs:
   tests:
     name: Tests
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.allow_failures }}
+    continue-on-error: ${{ matrix.browser == 'chrome' && matrix.selenium == '2.53.1' }}
     strategy:
       fail-fast: false
       matrix:
