@@ -13,6 +13,7 @@
         <server name="DRIVER_URL" value="http://localhost:4444/wd/hub"/>
         <server name="WEB_FIXTURES_HOST" value="http://host.docker.internal:8002"/>
         <server name="DRIVER_MACHINE_BASE_PATH" value="/fixtures/"/>
+        <env name="SYMFONY_DEPRECATIONS_HELPER" value="disabled" />
     </php>
     <coverage>
         <include>
